@@ -32,7 +32,7 @@ public class MapContinent
 	//global variables
 	int[][] board = new int[GRID][GRID];
 	boolean buttonPress = false;
-	boolean makeMap = true;
+	boolean makeMap = false;
 
 	MapContinent() {	//constructor
 		initGame();
@@ -77,56 +77,38 @@ public class MapContinent
 
 	}
 	void makeContinents() {
-
-
+		
 	}
 
 	//PROBLEM 2: Fix the function "findLakes()" so that it colours all empty squares that are adjacent to this one.
 	//PROBLEM 3: Once you have solved problem 2, now set things up so that if any part 
 	//           of a lake touches the edge of the board it becomes an ocean.	
 	void findLakes(int x, int y, int type, boolean rClick) {
-		if (buttonPress) {
+		if (x < 0 || x >= GRID || y < 0 || y >= GRID)
+			return;
+		if (board[x][y] == OCEAN && type == LAKE) {
 			return;
 		}
-		if (x < 0 || x >= GRID || y < 0 || y >= GRID) {
+		if (board[x][y] != EMPTY && type == LAKE)
 			return;
-		}
-		if (board[x][y] == OCEAN && !rClick &&  type == LAKE) {
-			return;
-		}
-		if (board[x][y] != EMPTY && !rClick &&  type == LAKE) {
-			return;
-		}
-		if ((x == 0 || x == GRID - 1 || y == 0 || y == GRID - 1) && !rClick && type == LAKE) {
+		if ((x == 0 || y == 0 || x == GRID - 1 || y == GRID - 1) && type == LAKE) {
 			findLakes(x, y, OCEAN, false);
 			return;
 		}
-		if (board[x][y] != LAKE && board[x][y] != EMPTY && type == OCEAN) {
+		if (board[x][y] != LAKE && board[x][y] != EMPTY && type == OCEAN)
 			return;
-		}
-		if(!rClick) {
-			ActionListener task = new ActionListener() {
-				public void actionPerformed (ActionEvent e ) {
-					if (board[x + 1][y] == OCEAN || board[x-1][y] == OCEAN || board[x ][y + 1] == OCEAN || board[x ][y - 1] == OCEAN) {
-						findLakes(x, y, OCEAN, false);
-					}
-					else if (board[x + 1][y] == LAKE || board[x-1][y] == LAKE || board[x ][y + 1] == LAKE || board[x ][y - 1] == LAKE) {
-						findLakes(x,y, LAKE, false);
-					}
-				}
-			};
-		}
 		
-
-
-		//call subroutine to colour in all contiguous lake squares
-
-		if (board[x][y] == EMPTY) board[x][y] = LAKE;
-		/*
-
-		if (... square is on the edge of the board) findOceans(x,y);  
-
-		 */
+		board[x][y] = type;
+		
+		if(!rClick) {
+			
+			findLakes(x+1,y, type, false);
+			findLakes(x-1,y, type, false);
+			findLakes(x,y+1, type, false);
+			findLakes(x,y-1, type, false);
+			
+		}
+		return;
 	}
 
 
@@ -217,15 +199,14 @@ public class MapContinent
 				int x = e.getX();
 				int y = e.getY();
 				//calculate which square you clicked on
-				int i = (int)  x/blockX;
+				int i = (int) x/blockX;
 				int j = (int) y/blockY;	// blockY/y
 
 				//allow the right mouse button to toggle/cycle the terrain
-				if (e.getButton() != MouseEvent.BUTTON1) {
+				if (e.getButton() == MouseEvent.BUTTON3) {
 					switch (board[i][j]) {
 					case LAND:
 						board[i][j] = EMPTY;
-						findLakes(i,j, LAKE, true);
 						break;
 					default:
 						board[i][j] = LAND;
@@ -242,10 +223,11 @@ public class MapContinent
 							buttonPress = false;
 						}
 					};
+					return;
 				}
 
 				findLakes(i,j, LAKE, false);								
-				//repaint();
+				repaint();
 			}		
 		} //end of MyMouseListener class
 
