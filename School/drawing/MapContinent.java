@@ -2,6 +2,14 @@ package drawing;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
 import javax.swing.*;
 
 //Starting class for MapContinent program
@@ -13,7 +21,7 @@ public class MapContinent
 	}
 
 	//constants	
-	final static int GRID = 32; //size of grid/board
+	final static int GRID = 64; //size of grid/board
 	final static int SQSIZE = 23; // size of each square in pixels
 	final static int NUM_LAND = (GRID * GRID /2); //number of land tiles
 
@@ -32,7 +40,7 @@ public class MapContinent
 	//global variables
 	int[][] board = new int[GRID][GRID];
 	boolean buttonPress = false;
-	boolean makeMap = false;
+	boolean makeMap = true;
 
 	MapContinent() {	//constructor
 		initGame();
@@ -52,7 +60,7 @@ public class MapContinent
 			makeRandomMap();
 		}
 		else {
-			makeContinents();
+			//makeContinents();
 		}
 
 	}
@@ -74,16 +82,66 @@ public class MapContinent
 				t2--;
 			}
 		}
-
 	}
 	void makeContinents() {
+		int points = GRID/4;
+		int[][] seedLocations = new int[points][points];
+		double probability = 1;
 		
-	}
+		// Placing Seeds
+		for (int count = 0; count < points-1; count++) {
+			int randomPlaceX = (int) (Math.random() * (GRID-1));
+			int randomPlaceY = (int) (Math.random() * (GRID-1));
+			
+			if (board[randomPlaceX][randomPlaceY] != EMPTY) {
+				count--;
+			} else {
+				board[randomPlaceX][randomPlaceY] = LAND;
+				seedLocations[count][0] = randomPlaceX;
+				seedLocations[count][1] = randomPlaceY;
+			}
+		}
+		
+		// Placing land
+		for (int seed = 0; seed < points-1; seed++) {
+			int locationX = seedLocations[seed][0];
+			int locationY = seedLocations[seed][1];
+			for (int x = 0; x < GRID; x++) {
+				// Checking Distance from Seed X and then adding GRID/10 
+				// (this is to fix axis bias where if placed near one of the axis' of the seed it has a really high chance of placing land)
+				double mathTestX = Math.abs(locationX-x)+(GRID/15);
+				// If Distance from Seed X is more than GRID / 5 set Distance to 9999999 making probability near 0 (allso helps with axis bias)
+				if (Math.abs(locationX-x) > GRID/5) {
+					mathTestX = 9999999;
+				}
+				// setting the distance to a decimal 
+				double distancedecX = probability / (mathTestX);
+				
+				for (int y = 0; y < GRID; y++) {
+					if ((locationX != x  || locationY != y) && board[x][y] == EMPTY) {
+						double mathTestY = Math.abs(locationY-y)+(GRID/15);
+						if (Math.abs(locationY-y) > GRID/5) {
+							mathTestY = 999999;
+						}
+						double distancedecY = probability / (mathTestY);
+						
+						// Adding the two probabilities and averaging them
+						double avg = (mathTestX + mathTestY)/2;
+						// Creating a percentage based on the average
+						double threshold = ((Math.random()/(GRID/2))*avg+(0/GRID));
+						if ((distancedecX + distancedecY)/2 > threshold) {
+							board[x][y] = LAND;
+						}
+					}
+				}
+			}
+		}
+ 	}
 
 	//PROBLEM 2: Fix the function "findLakes()" so that it colours all empty squares that are adjacent to this one.
 	//PROBLEM 3: Once you have solved problem 2, now set things up so that if any part 
 	//           of a lake touches the edge of the board it becomes an ocean.	
-	void findLakes(int x, int y, int type, boolean rClick) {
+	void findLakes(int x, int y, int type) {
 		if (x < 0 || x >= GRID || y < 0 || y >= GRID)
 			return;
 		if (board[x][y] == OCEAN && type == LAKE) {
@@ -92,7 +150,7 @@ public class MapContinent
 		if (board[x][y] != EMPTY && type == LAKE)
 			return;
 		if ((x == 0 || y == 0 || x == GRID - 1 || y == GRID - 1) && type == LAKE) {
-			findLakes(x, y, OCEAN, false);
+			findLakes(x, y, OCEAN);
 			return;
 		}
 		if (board[x][y] != LAKE && board[x][y] != EMPTY && type == OCEAN)
@@ -100,14 +158,11 @@ public class MapContinent
 		
 		board[x][y] = type;
 		
-		if(!rClick) {
 			
-			findLakes(x+1,y, type, false);
-			findLakes(x-1,y, type, false);
-			findLakes(x,y+1, type, false);
-			findLakes(x,y-1, type, false);
-			
-		}
+		findLakes(x+1,y, type);
+		findLakes(x-1,y, type);
+		findLakes(x,y+1, type);
+		findLakes(x,y-1, type);
 		return;
 	}
 
@@ -217,20 +272,57 @@ public class MapContinent
 				if(e.getButton() == MouseEvent.BUTTON2) {
 					initGame();
 					repaint();
-					buttonPress = true;
-					ActionListener task =new ActionListener() {
-						public void actionPerformed(ActionEvent e) {
-							buttonPress = false;
-						}
-					};
 					return;
 				}
 
-				findLakes(i,j, LAKE, false);								
+				findLakes(i,j, LAKE);								
 				repaint();
 			}		
 		} //end of MyMouseListener class
+		
+		
 
 	} //end of DrawingPanel class
+	
+	/*
+	 * 		try {
+				String table = "";
+				BufferedWriter bw = new BufferedWriter(new FileWriter(new File("map.txt")));
+				for (int x=0; x < GRID; x++) {
+					for (int y = 0; y < GRID; y++) {
+						table = table + "" + board[x][y];
+					}
+				}
+				bw.write(table);
+				bw.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+	 * 		try {
+				BufferedReader bufferedReader = new BufferedReader(new FileReader("map.txt"));
+				String line = bufferedReader.readLine();
+				int savedGrid = (int) (Math.sqrt(line.length()));
+				bufferedReader.close();
+				
+				if (savedGrid > GRID) return;
+				
+				bufferedReader = new BufferedReader(new FileReader("map.txt"));
+				int num = bufferedReader.read();
+				
+				for (int x=0; x < GRID; x++) {
+					for (int y = 0; y < GRID; y++) {
+						char character = (char) num;
+					    
+					    board[x][y] = (int) (character - '0');
 
+					    num = bufferedReader.read();
+					}
+				}
+				
+				bufferedReader.close();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+
+	 * */
 }
